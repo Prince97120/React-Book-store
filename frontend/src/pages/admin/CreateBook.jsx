@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import AdminNavbar from "../../components/admin/AdminNavbar";
+import { FiArrowLeft } from "react-icons/fi";
 import { useSnackbar } from "notistack";
 import axios from "axios";
 
@@ -90,35 +92,15 @@ const CreateBook = () => {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <header className="bg-white shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center py-6">
-                        <h1 className="text-3xl font-bold text-gray-900">
-                            Add New Book
-                        </h1>
-                        <div className="flex items-center space-x-4">
-                            <Link
-                                to="/admin/dashboard"
-                                className="text-gray-700 hover:text-gray-900"
-                            >
-                                Back to Dashboard
-                            </Link>
-                            <button
-                                onClick={() => {
-                                    localStorage.removeItem("adminLoggedIn");
-                                    window.location.href = "/admin";
-                                }}
-                                className="text-gray-700 hover:text-gray-900"
-                            >
-                                Logout
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            <AdminNavbar />
 
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div className="mb-4">
+                    <button onClick={() => window.history.back()} className="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+                        <FiArrowLeft />
+                        Back
+                    </button>
+                </div>
                 <div className="bg-white rounded-lg shadow overflow-hidden">
                     <div className="px-6 py-4 border-b border-gray-200">
                         <h2 className="text-lg font-semibold text-gray-900">

@@ -3,12 +3,14 @@ import { useParams, Link } from "react-router-dom";
 import { useSnackbar } from "notistack";
 import axios from "axios";
 import { getImageUrl } from "../../utils/imageUtils";
+import { FiShoppingCart } from "react-icons/fi";
 
 const BookDetails = () => {
     const { id } = useParams();
     const [book, setBook] = useState(null);
     const [loading, setLoading] = useState(true);
     const [quantity, setQuantity] = useState(1);
+    const [cartCount, setCartCount] = useState(0);
     const { enqueueSnackbar } = useSnackbar();
 
     const loadBook = useCallback(async () => {
@@ -24,9 +26,44 @@ const BookDetails = () => {
         }
     }, [id, enqueueSnackbar]);
 
+    const loadCartCount = useCallback(async () => {
+        const userId = localStorage.getItem("userId");
+        if (!userId) {
+            setCartCount(0);
+            return;
+        }
+
+        try {
+            const response = await axios.get(
+                `http://localhost:3000/api/cart/${userId}`
+            );
+            if (response.data && response.data.items) {
+                const totalItems = response.data.items.reduce(
+                    (sum, item) => sum + item.quantity,
+                    0
+                );
+                setCartCount(totalItems);
+            } else {
+                setCartCount(0);
+            }
+        } catch (error) {
+            setCartCount(0);
+        }
+    }, []);
+
     useEffect(() => {
         loadBook();
-    }, [loadBook]);
+        loadCartCount();
+    }, [loadBook, loadCartCount]);
+
+    // Refresh cart count when window gains focus (user returns to tab)
+    useEffect(() => {
+        const handleFocus = () => {
+            loadCartCount();
+        };
+        window.addEventListener('focus', handleFocus);
+        return () => window.removeEventListener('focus', handleFocus);
+    }, [loadCartCount]);
 
     const addToCart = async () => {
         const userId = localStorage.getItem("userId");
@@ -46,6 +83,8 @@ const BookDetails = () => {
             enqueueSnackbar("Added to cart successfully!", {
                 variant: "success",
             });
+            // Update cart count
+            loadCartCount();
         } catch (error) {
             enqueueSnackbar(
                 error.response?.data?.message || "Error adding to cart",
@@ -92,9 +131,15 @@ const BookDetails = () => {
                         <div className="flex items-center space-x-4">
                             <Link
                                 to="/cart"
-                                className="text-gray-700 hover:text-gray-900"
+                                className="flex items-center space-x-1 text-gray-700 hover:text-gray-900 relative"
                             >
-                                <span className="text-lg">🛒 Cart</span>
+                                <FiShoppingCart className="text-xl" />
+                                <span className="text-lg">Cart</span>
+                                {cartCount > 0 && (
+                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                                        {cartCount > 99 ? '99+' : cartCount}
+                                    </span>
+                                )}
                             </Link>
                             {localStorage.getItem("userId") ? (
                                 <div className="flex items-center space-x-2">

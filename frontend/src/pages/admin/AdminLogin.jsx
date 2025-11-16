@@ -15,6 +15,10 @@ const AdminLogin = () => {
         // Simulate admin login check
         if (password === "admin123") {
             localStorage.setItem("adminLoggedIn", "true");
+            // Clear any customer session when admin logs in
+            localStorage.removeItem("userId");
+            localStorage.removeItem("userName");
+            localStorage.removeItem("userEmail");
             enqueueSnackbar("Admin login successful!", { variant: "success" });
             navigate("/admin/dashboard");
         } else {

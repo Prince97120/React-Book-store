@@ -47,6 +47,8 @@ const Orders = () => {
                 return "bg-green-100 text-green-800";
             case "cancelled":
                 return "bg-red-100 text-red-800";
+            case "rejected":
+                return "bg-red-100 text-red-800";
             default:
                 return "bg-gray-100 text-gray-800";
         }
@@ -299,6 +301,25 @@ const Orders = () => {
                                             </p>
                                         </div>
                                     )}
+
+                                    <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end">
+                                        {order.status === "delivered" ? (
+                                            <Link
+                                                to={`/billing/${order._id}`}
+                                                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-medium"
+                                            >
+                                                View Bill / Receipt
+                                            </Link>
+                                        ) : order.status === "rejected" ? (
+                                            <p className="text-red-600 text-sm font-medium">
+                                                This order was rejected
+                                            </p>
+                                        ) : (
+                                            <p className="text-gray-600 text-sm">
+                                                Order is {order.status}. Bill will be available after delivery.
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         ))}

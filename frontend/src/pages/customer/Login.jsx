@@ -32,6 +32,8 @@ const Login = () => {
             localStorage.setItem("userId", response.data.user.id);
             localStorage.setItem("userName", response.data.user.name);
             localStorage.setItem("userEmail", response.data.user.email);
+            // Clear admin session when customer logs in
+            localStorage.removeItem("adminLoggedIn");
 
             enqueueSnackbar("Login successful!", { variant: "success" });
             navigate("/");

@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import AdminNavbar from "../../components/admin/AdminNavbar";
+import { FiArrowLeft } from "react-icons/fi";
 import { useSnackbar } from "notistack";
 import axios from "axios";
 
@@ -14,6 +16,7 @@ const EditBook = () => {
         description: "",
         category: "",
         stock: "",
+        isActive: true,
     });
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
@@ -49,6 +52,7 @@ const EditBook = () => {
                 description: book.description,
                 category: book.category,
                 stock: book.stock.toString(),
+                isActive: book.isActive !== undefined ? book.isActive : true,
             });
             setCurrentImage(book.image || "");
         } catch (error) {
@@ -60,9 +64,10 @@ const EditBook = () => {
     };
 
     const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
         setFormData({
             ...formData,
-            [e.target.name]: e.target.value,
+            [name]: type === "checkbox" ? checked : value,
         });
     };
 
@@ -91,6 +96,10 @@ const EditBook = () => {
             formDataToSend.append("description", formData.description);
             formDataToSend.append("category", formData.category);
             formDataToSend.append("stock", formData.stock);
+            // Auto-set inactive if stock is 0 or empty
+            const stockValue = parseInt(formData.stock) || 0;
+            const isActive = stockValue > 0 ? formData.isActive : false;
+            formDataToSend.append("isActive", isActive.toString());
 
             if (imageFile) {
                 formDataToSend.append("image", imageFile);
@@ -131,35 +140,15 @@ const EditBook = () => {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <header className="bg-white shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center py-6">
-                        <h1 className="text-3xl font-bold text-gray-900">
-                            Edit Book
-                        </h1>
-                        <div className="flex items-center space-x-4">
-                            <Link
-                                to="/admin/dashboard"
-                                className="text-gray-700 hover:text-gray-900"
-                            >
-                                Back to Dashboard
-                            </Link>
-                            <button
-                                onClick={() => {
-                                    localStorage.removeItem("adminLoggedIn");
-                                    window.location.href = "/admin";
-                                }}
-                                className="text-gray-700 hover:text-gray-900"
-                            >
-                                Logout
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            <AdminNavbar />
 
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div className="mb-4">
+                    <button onClick={() => window.history.back()} className="flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+                        <FiArrowLeft />
+                        Back
+                    </button>
+                </div>
                 <div className="bg-white rounded-lg shadow overflow-hidden">
                     <div className="px-6 py-4 border-b border-gray-200">
                         <h2 className="text-lg font-semibold text-gray-900">
@@ -294,6 +283,32 @@ const EditBook = () => {
                                     onChange={handleChange}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 />
+                                {parseInt(formData.stock) === 0 && (
+                                    <p className="mt-1 text-sm text-yellow-600">
+                                        Book will be set to inactive when stock is 0
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="flex items-center space-x-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        name="isActive"
+                                        checked={formData.isActive}
+                                        onChange={handleChange}
+                                        disabled={parseInt(formData.stock) === 0}
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50"
+                                    />
+                                    <span className="text-sm font-medium text-gray-700">
+                                        Active Status
+                                    </span>
+                                </label>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    {parseInt(formData.stock) === 0
+                                        ? "Cannot activate book with 0 stock"
+                                        : "Only active books are visible to customers"}
+                                </p>
                             </div>
 
                             <div className="md:col-span-2">

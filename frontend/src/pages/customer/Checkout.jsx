@@ -95,15 +95,16 @@ const Checkout = () => {
             );
 
             // Place the order
-            await axios.post("http://localhost:3000/api/order", {
+            const orderRes = await axios.post("http://localhost:3000/api/order", {
                 userId,
                 shippingAddress,
             });
 
-            enqueueSnackbar(
-                "🎉 Order placed successfully! Your order will be delivered to your address. Thank you for shopping with us!",
-                { variant: "success", autoHideDuration: 5000 }
-            );
+            enqueueSnackbar("Order placed successfully! Waiting for admin approval.", {
+                variant: "success",
+            });
+            
+            // Always redirect to orders page - billing will be available after admin approval
             navigate("/orders");
         } catch (error) {
             enqueueSnackbar(

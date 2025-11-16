@@ -323,35 +323,98 @@ router.post("/order", async (request, response) => {
             });
         }
 
-        // Create order
-        const order = await Order.create({
+        // Create order with pending status - use new Order() to ensure explicit status
+        const newOrder = new Order({
             user: userId,
             items: orderItems,
             totalAmount,
-            shippingAddress,
-            status: "delivered", // Changed from "pending" to "delivered"
+            shippingAddress: shippingAddress,
+            status: "pending", // CRITICAL: Order starts as pending, admin will approve/reject
             paymentMethod: "cod",
-            paymentStatus: "paid", // Changed from "pending" to "paid"
+            paymentStatus: "pending", // Payment pending until order is approved
         });
 
-        // Update book stock
-        for (const item of cart.items) {
-            await Book.findByIdAndUpdate(item.book._id, {
-                $inc: { stock: -item.quantity },
+        // Explicitly ensure status is pending before saving
+        newOrder.status = "pending";
+        newOrder.paymentStatus = "pending";
+
+        // Save the order
+        const savedOrder = await newOrder.save();
+
+        // CRITICAL: Force update status to pending directly in database
+        // This ensures status is definitely "pending" regardless of any defaults or hooks
+        await Order.updateOne(
+            { _id: savedOrder._id },
+            { 
+                $set: { 
+                    status: "pending",
+                    paymentStatus: "pending"
+                }
+            }
+        );
+
+        // Verify order was saved with pending status by querying database
+        const verifyOrder = await Order.findById(savedOrder._id);
+        console.log("=== ORDER CREATION DEBUG ===");
+        console.log("Order ID:", savedOrder._id);
+        console.log("Order status after save:", savedOrder.status);
+        console.log("Order status from DB (after force update):", verifyOrder.status);
+        console.log("Order payment status:", verifyOrder.paymentStatus);
+        console.log("============================");
+
+        if (verifyOrder.status !== "pending") {
+            console.error("CRITICAL ERROR: Order status is still not pending after force update!");
+            console.error("Current status:", verifyOrder.status);
+            return response.status(500).json({
+                message: "Failed to create order with pending status. Please try again.",
             });
         }
+
+        // Don't update stock yet - wait for admin approval
+        // Stock will be updated when admin approves the order
 
         // Clear cart
         cart.items = [];
         await cart.save();
 
+        // Return order with populated data - query fresh from DB
+        const createdOrder = await Order.findById(savedOrder._id)
+            .populate("items.book")
+            .populate("user", "name email");
+
+        // Double-check status in response - if still not pending, log error
+        if (createdOrder.status !== "pending") {
+            console.error("CRITICAL WARNING: Order status is not pending in response!");
+            console.error("Order ID:", createdOrder._id);
+            console.error("Status found:", createdOrder.status);
+            console.error("Expected: pending");
+            // Force one more time before returning
+            await Order.findByIdAndUpdate(createdOrder._id, { 
+                status: "pending", 
+                paymentStatus: "pending" 
+            });
+            // Re-fetch
+            const fixedOrder = await Order.findById(createdOrder._id)
+                .populate("items.book")
+                .populate("user", "name email");
+            createdOrder.status = fixedOrder.status;
+            createdOrder.paymentStatus = fixedOrder.paymentStatus;
+        }
+
+        console.log("Final order status being returned:", createdOrder.status);
+
         return response.status(201).json({
-            message: "Order placed successfully!",
-            order,
+            message: "Order placed successfully! Waiting for admin approval.",
+            order: createdOrder,
         });
     } catch (error) {
-        console.log(error.message);
-        response.status(500).send({ message: error.message });
+        console.error("=== ORDER CREATION ERROR ===");
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+        console.error("============================");
+        response.status(500).json({ 
+            message: error.message || "Error creating order"
+        });
     }
 });
 
@@ -364,6 +427,25 @@ router.get("/orders/:userId", async (request, response) => {
             .sort({ createdAt: -1 });
 
         return response.status(200).json(orders);
+    } catch (error) {
+        console.log(error.message);
+        response.status(500).send({ message: error.message });
+    }
+});
+
+// Get single order by id (for billing/invoice)
+router.get("/order/:orderId", async (request, response) => {
+    try {
+        const { orderId } = request.params;
+        const order = await Order.findById(orderId)
+            .populate("items.book")
+            .populate("user");
+
+        if (!order) {
+            return response.status(404).json({ message: "Order not found" });
+        }
+
+        return response.status(200).json(order);
     } catch (error) {
         console.log(error.message);
         response.status(500).send({ message: error.message });
